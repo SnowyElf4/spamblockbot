@@ -1,0 +1,85 @@
+import asyncio
+from aiogram import Bot, Dispatcher
+from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
+from aiogram.fsm.storage.memory import MemoryStorage
+from aiogram.fsm.state import StatesGroup, State
+from aiogram.fsm.context import FSMContext
+from aiogram.filters import Command
+
+# Токен бота
+API_TOKEN = '7992716170:AAFIKgOEZhR4Nw1-WWnCb1OSk9ptVPqJWEY'
+chat_id = '5189923704'
+
+# Создание экземпляров бота и диспетчера
+bot = Bot(token=API_TOKEN)
+storage = MemoryStorage()
+dp = Dispatcher(storage=storage)
+
+# Определение состояний
+class UserState(StatesGroup):
+    name = State()
+
+@dp.message(Command("start"))
+async def send_hello(message: Message):
+    markup = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="Спам-Блок", callback_data="spam-block")],
+        [InlineKeyboardButton(text="Написать сообщение", callback_data="sms")]
+    ])
+    await message.answer(
+        "<b>Привет! Если у тебя <u>Спам-Блок</u>. \n\n- - Нажимай на кнопки ниже, и свяжись с нужным тебе человеком.</b>",
+        parse_mode="HTML",
+        reply_markup=markup
+    )
+
+@dp.callback_query(lambda c: c.data == "sms")
+async def start_message(call: CallbackQuery, state: FSMContext):
+    cancel_button = InlineKeyboardButton("Отмена", callback_data="cancel")
+    markup = InlineKeyboardMarkup(inline_keyboard=[[cancel_button]])
+    await call.message.answer(
+        "<b>Напиши сообщение, которое ты желаешь отправить:</b>",
+        parse_mode="HTML",
+        reply_markup=markup
+    )
+    await state.set_state(UserState.name)
+
+@dp.callback_query(lambda c: c.data == "cancel")
+async def cancel_message(call: CallbackQuery, state: FSMContext):
+    await call.message.answer("Отправка сообщения отменена.", parse_mode="HTML")
+    await state.clear()
+
+@dp.callback_query(lambda c: c.data == "spam-block")
+async def report_spam(call: CallbackQuery):
+    usname = call.from_user.username or "Без имени"
+    await bot.send_message(
+        chat_id=chat_id,
+        text=f"У пользователя @{usname} <u>спам-блок!</u>",
+        parse_mode="HTML"
+    )
+    await call.message.answer(
+        "Я дал знать о твоём <u>спам-блоке</u>! \n\n- - Так же ты можешь дать знать, что ты конкретно хочешь заранее, написав сообщение благодаря кнопке в меню.",
+        parse_mode="HTML"
+    )
+
+@dp.message(UserState.name)
+async def get_username(message: Message, state: FSMContext):
+    if message.text.lower() == "отмена":
+        await message.answer("Отменено.", parse_mode="HTML")
+        await state.clear()
+    else:
+        usname = message.from_user.username or "Без имени"
+        await bot.send_message(
+            chat_id=chat_id,
+            text=f"Сообщение пользователя: @{usname}\n\n- - {message.text}",
+            parse_mode="HTML"
+        )
+        await state.clear()
+        await message.answer("<b>Сообщение отправлено.</b>", parse_mode="HTML")
+
+async def main():
+    print("Бот запущен!")
+    await dp.start_polling(bot)
+
+if __name__ == "__main__":
+    asyncio.run(main())
+
+
