@@ -5,6 +5,7 @@ from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.context import FSMContext
 from aiogram.filters import Command
+from aiogram.filters.callback_data import CallbackData
 
 # Токен бота
 API_TOKEN = '7992716170:AAFIKgOEZhR4Nw1-WWnCb1OSk9ptVPqJWEY'
@@ -19,46 +20,47 @@ dp = Dispatcher(storage=storage)
 class UserState(StatesGroup):
     name = State()
 
+# Определение CallbackData
+class ButtonCallback(CallbackData, prefix="action"):
+    action: str  # Действие, которое нужно обработать
+
 @dp.message(Command("start"))
 async def send_hello(message: Message):
     markup = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="Спам-Блок", callback_data="spam-block")],
-        [InlineKeyboardButton(text="Написать сообщение", callback_data="sms")]
+        [InlineKeyboardButton(text="Спам-Блок", callback_data=ButtonCallback(action="spam-block").pack())],
+        [InlineKeyboardButton(text="Написать сообщение", callback_data=ButtonCallback(action="sms").pack())]
     ])
     await message.answer(
-        "<b>Привет! Если у тебя <u>Спам-Блок</u>. \n\n- - Нажимай на кнопки ниже, и свяжись с нужным тебе человеком.</b>",
+        "<b>Привет! Если у тебя <u>Спам-Блок</u>. \n\n- - Нажимай на кнопки ниже, и свяжись со мной.</b>",
         parse_mode="HTML",
         reply_markup=markup
     )
 
-@dp.callback_query(lambda c: c.data == "sms")
-async def start_message(call: CallbackQuery, state: FSMContext):
-    cancel_button = InlineKeyboardButton("Отмена", callback_data="cancel")
-    markup = InlineKeyboardMarkup(inline_keyboard=[[cancel_button]])
-    await call.message.answer(
-        "<b>Напиши сообщение, которое ты желаешь отправить:</b>",
-        parse_mode="HTML",
-        reply_markup=markup
-    )
-    await state.set_state(UserState.name)
-
-@dp.callback_query(lambda c: c.data == "cancel")
-async def cancel_message(call: CallbackQuery, state: FSMContext):
-    await call.message.answer("Отправка сообщения отменена.", parse_mode="HTML")
-    await state.clear()
-
-@dp.callback_query(lambda c: c.data == "spam-block")
-async def report_spam(call: CallbackQuery):
-    usname = call.from_user.username or "Без имени"
-    await bot.send_message(
-        chat_id=chat_id,
-        text=f"У пользователя @{usname} <u>спам-блок!</u>",
-        parse_mode="HTML"
-    )
-    await call.message.answer(
-        "Я дал знать о твоём <u>спам-блоке</u>! \n\n- - Так же ты можешь дать знать, что ты конкретно хочешь заранее, написав сообщение благодаря кнопке в меню.",
-        parse_mode="HTML"
-    )
+@dp.callback_query(ButtonCallback.filter())
+async def handle_callbacks(call: CallbackQuery, callback_data: ButtonCallback, state: FSMContext):
+    if callback_data.action == "sms":
+        cancel_button = InlineKeyboardButton(text="Отмена", callback_data=ButtonCallback(action="cancel").pack())
+        markup = InlineKeyboardMarkup(inline_keyboard=[[cancel_button]])
+        await call.message.answer(
+            "<b>Напиши сообщение, которое ты желаешь отправить:</b>",
+            parse_mode="HTML",
+            reply_markup=markup
+        )
+        await state.set_state(UserState.name)
+    elif callback_data.action == "cancel":
+        await call.message.answer("Отправка сообщения отменена.", parse_mode="HTML")
+        await state.clear()
+    elif callback_data.action == "spam-block":
+        usname = call.from_user.username or "Без имени"
+        await bot.send_message(
+            chat_id=chat_id,
+            text=f"У пользователя @{usname} <u>спам-блок!</u>",
+            parse_mode="HTML"
+        )
+        await call.message.answer(
+            "Я дал знать о твоём <u>спам-блоке</u>! \n\n- - Так же ты можешь дать знать, что ты конкретно хочешь заранее, написав сообщение благодаря кнопке в меню.",
+            parse_mode="HTML"
+        )
 
 @dp.message(UserState.name)
 async def get_username(message: Message, state: FSMContext):
