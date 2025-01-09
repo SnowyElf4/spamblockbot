@@ -8,8 +8,8 @@ from aiogram.filters import Command
 from aiogram.filters.callback_data import CallbackData
 
 # Токен бота
-API_TOKEN = '7992716170:AAFIKgOEZhR4Nw1-WWnCb1OSk9ptVPqJWEY'
-chat_id = '5189923704'
+API_TOKEN = 'ВАШТОКЕНБОТА'
+chat_id = 'ВАШАККАУНТID'
 
 # Создание экземпляров бота и диспетчера
 bot = Bot(token=API_TOKEN)
