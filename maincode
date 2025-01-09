@@ -27,10 +27,10 @@ class ButtonCallback(CallbackData, prefix="action"):
 
 @dp.message(Command("start"))
 async def send_hello(message: Message, state: FSMContext):
-    markup = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="СпамБлок", callback_data=ButtonCallback(action="spamblock").pack())],
+    markup = InlineKeyboardMarkup(inline_keyboard=[ 
+        [InlineKeyboardButton(text="СпамБлок", callback_data=ButtonCallback(action="spamblock").pack())], 
         [InlineKeyboardButton(text="Написать сообщение", callback_data=ButtonCallback(action="sms").pack())]
-    ])
+    ]) 
     sent_message = await message.answer(
         "<b>Привет! Если у тебя <u>СпамБлок</u>. \n\n- - Нажимай на кнопки ниже, и свяжись со мной.</b>",
         parse_mode="HTML",
@@ -78,7 +78,13 @@ async def get_username(message: Message, state: FSMContext):
             parse_mode="HTML"
         )
         await state.clear()
-        await message.edit_text("<b>Сообщение отправлено.</b>", parse_mode="HTML")
+
+        # Проверка, доступно ли редактирование текущего сообщения
+        try:
+            await message.edit_text("<b>Сообщение отправлено.</b>", parse_mode="HTML")
+        except Exception as e:
+            # Если редактирование не удалось, отправим новое сообщение
+            await message.answer("<b>Сообщение отправлено.</b>", parse_mode="HTML")
 
 async def main():
     print("Бот запущен!")
