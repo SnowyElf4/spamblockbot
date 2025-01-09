@@ -9,6 +9,7 @@ from aiogram.filters.callback_data import CallbackData
 
 # Токен бота
 API_TOKEN = 'ВАШТОКЕНБОТА'
+# Айди аккаунта ТГ
 chat_id = 'ВАШАККАУНТID'
 
 # Создание экземпляров бота и диспетчера
