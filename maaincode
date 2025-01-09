@@ -25,57 +25,59 @@ class ButtonCallback(CallbackData, prefix="action"):
     action: str  # Действие, которое нужно обработать
 
 @dp.message(Command("start"))
-async def send_hello(message: Message):
+async def send_hello(message: Message, state: FSMContext):
     markup = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="Спам-Блок", callback_data=ButtonCallback(action="spam-block").pack())],
+        [InlineKeyboardButton(text="СпамБлок", callback_data=ButtonCallback(action="spamblock").pack())],
         [InlineKeyboardButton(text="Написать сообщение", callback_data=ButtonCallback(action="sms").pack())]
     ])
-    await message.answer(
-        "<b>Привет! Если у тебя <u>Спам-Блок</u>. \n\n- - Нажимай на кнопки ниже, и свяжись со мной.</b>",
+    sent_message = await message.answer(
+        "<b>Привет! Если у тебя <u>СпамБлок</u>. \n\n- - Нажимай на кнопки ниже, и свяжись со мной.</b>",
         parse_mode="HTML",
         reply_markup=markup
     )
+    # Сохраняем отправленное сообщение в состоянии (для редактирования)
+    await state.update_data(sent_message_id=sent_message.message_id)
 
 @dp.callback_query(ButtonCallback.filter())
 async def handle_callbacks(call: CallbackQuery, callback_data: ButtonCallback, state: FSMContext):
     if callback_data.action == "sms":
         cancel_button = InlineKeyboardButton(text="Отмена", callback_data=ButtonCallback(action="cancel").pack())
         markup = InlineKeyboardMarkup(inline_keyboard=[[cancel_button]])
-        await call.message.answer(
+        await call.message.edit_text(
             "<b>Напиши сообщение, которое ты желаешь отправить:</b>",
             parse_mode="HTML",
             reply_markup=markup
         )
         await state.set_state(UserState.name)
     elif callback_data.action == "cancel":
-        await call.message.answer("Отправка сообщения отменена.", parse_mode="HTML")
+        await call.message.edit_text("Отправка сообщения отменена.", parse_mode="HTML")
         await state.clear()
-    elif callback_data.action == "spam-block":
-        usname = call.from_user.username or "Без имени"
+    elif callback_data.action == "spamblock":
+        usname = call.from_user.username or f"ID: {call.from_user.id}"
         await bot.send_message(
             chat_id=chat_id,
-            text=f"У пользователя @{usname} <u>спам-блок!</u>",
+            text=f"У пользователя @{usname} <u>спамблок!</u>",
             parse_mode="HTML"
         )
-        await call.message.answer(
-            "Я дал знать о твоём <u>спам-блоке</u>! \n\n- - Так же ты можешь дать знать, что ты конкретно хочешь заранее, написав сообщение благодаря кнопке в меню.",
+        await call.message.edit_text(
+            "Я дал знать о твоём <u>спамблоке</u>! \n\nТак же ты можешь дать знать, что ты конкретно хочешь заранее, написав сообщение благодаря кнопке в меню.",
             parse_mode="HTML"
         )
 
 @dp.message(UserState.name)
 async def get_username(message: Message, state: FSMContext):
     if message.text.lower() == "отмена":
-        await message.answer("Отменено.", parse_mode="HTML")
+        await message.edit_text("Отменено.", parse_mode="HTML")
         await state.clear()
     else:
-        usname = message.from_user.username or "Без имени"
+        usname = message.from_user.username or f"ID: {message.from_user.id}"
         await bot.send_message(
             chat_id=chat_id,
-            text=f"Сообщение пользователя: @{usname}\n\n- - {message.text}",
+            text=f"Сообщение пользователя: @{usname}\n\n{message.text}",
             parse_mode="HTML"
         )
         await state.clear()
-        await message.answer("<b>Сообщение отправлено.</b>", parse_mode="HTML")
+        await message.edit_text("<b>Сообщение отправлено.</b>", parse_mode="HTML")
 
 async def main():
     print("Бот запущен!")
@@ -83,5 +85,3 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
-
-
