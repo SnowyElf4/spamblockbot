@@ -1,1 +1,1 @@
-# pmbot
+# spamblockbot
